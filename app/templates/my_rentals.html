@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>내 대여 목록</h1>
+{% if not rentals %}
+<p>아직 대여한 도서가 없습니다. <a href="/books">도서 목록 보러가기</a></p>
+{% else %}
+<table>
+  <tr><th>도서</th><th>대여일시</th><th>상태</th><th></th></tr>
+  {% for rental in rentals %}
+  <tr>
+    <td>{{ rental.book.title }}</td>
+    <td>{{ rental.rented_at.strftime('%Y-%m-%d %H:%M') }}</td>
+    <td class="status-{{ rental.status }}">{{ rental.status }}</td>
+    <td>
+      {% if rental.status == '대여중' %}
+      <form class="inline" method="post" action="/rentals/{{ rental.id }}/return">
+        <button type="submit">반납하기</button>
+      </form>
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+{% endblock %}

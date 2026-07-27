@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>도서 목록</h1>
+<table>
+  <tr><th>제목</th><th>저자</th><th>재고</th><th></th></tr>
+  {% for book in books %}
+  <tr>
+    <td>{{ book.title }}</td>
+    <td>{{ book.author }}</td>
+    <td>{{ book.available_copies }} / {{ book.total_copies }}</td>
+    <td><a href="/books/{{ book.id }}">상세</a></td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}
