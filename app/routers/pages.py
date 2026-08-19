@@ -5,13 +5,14 @@ from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
-from app.auth.dependencies import get_current_member
+from app.auth.dependencies import get_current_member, get_or_create_csrf_token, verify_csrf
 from app.database import get_db
 from app.models.member import Member
 from app.services.auth_service import authenticate
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
+templates.env.globals["csrf_token"] = get_or_create_csrf_token
 
 
 @router.get("/")
@@ -22,7 +23,9 @@ def home(request: Request, current_member: Optional[Member] = Depends(get_curren
 
 @router.get("/login")
 def login_form(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request, "error": None})
+    """require_login이 세션에 남긴 1회성 플래시 메시지를 꺼내 보여주고 즉시 지운다."""
+    flash = request.session.pop("flash", None)
+    return templates.TemplateResponse("login.html", {"request": request, "error": flash})
 
 
 @router.post("/login")
@@ -43,7 +46,7 @@ def login_submit(
     return RedirectResponse(url="/books", status_code=303)
 
 
-@router.post("/logout")
+@router.post("/logout", dependencies=[Depends(verify_csrf)])
 def logout(request: Request):
     request.session.clear()
     return RedirectResponse(url="/", status_code=303)

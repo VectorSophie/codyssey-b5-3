@@ -1,10 +1,12 @@
+from typing import List
+
 from sqlalchemy.orm import Session
 
 from app.errors import DomainNotFound
 from app.models.book import Book
 
 
-def get_all(db: Session):
+def get_all(db: Session) -> List[Book]:
     return db.query(Book).order_by(Book.id).all()
 
 

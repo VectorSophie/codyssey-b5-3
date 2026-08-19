@@ -23,3 +23,6 @@ class Rental(Base):
 
     member = relationship("Member", back_populates="rentals")
     book = relationship("Book", back_populates="rentals")
+
+    def __repr__(self) -> str:
+        return f"<Rental id={self.id} book_id={self.book_id} member_id={self.member_id} status={self.status!r}>"

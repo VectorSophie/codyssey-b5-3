@@ -1,21 +1,36 @@
 import os
+import warnings
 
 from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
-from app.auth.dependencies import NotAuthenticated, hash_password
+from app.auth.dependencies import CSRFError, NotAuthenticated, hash_password
 from app.database import Base, SessionLocal, engine
 from app.errors import DomainNotFound
 from app.models import Book, Member
 from app.routers import books, pages, rentals
 
 # ponytail: 데모용 기본값. 실서비스라면 반드시 환경변수로만 주입해야 한다.
-SECRET_KEY = os.environ.get("SESSION_SECRET_KEY", "dev-secret-change-in-production")
+DEFAULT_SECRET_KEY = "dev-secret-change-in-production"
+SECRET_KEY = os.environ.get("SESSION_SECRET_KEY", DEFAULT_SECRET_KEY)
+if SECRET_KEY == DEFAULT_SECRET_KEY:
+    warnings.warn(
+        "SESSION_SECRET_KEY가 설정되지 않아 데모용 기본값을 쓰고 있습니다. "
+        "배포 환경에서는 반드시 환경변수로 별도 값을 지정하세요(세션 쿠키 위조 방지).",
+        RuntimeWarning,
+        stacklevel=1,
+    )
 
 app = FastAPI(title="도서 대여 서비스")
-app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=SECRET_KEY,
+    max_age=int(os.environ.get("SESSION_MAX_AGE", 60 * 60 * 2)),  # 기본 2시간 후 만료
+    https_only=os.environ.get("SESSION_HTTPS_ONLY", "false").lower() == "true",
+    same_site="lax",
+)
 
 Base.metadata.create_all(bind=engine)
 
@@ -50,7 +65,12 @@ templates = Jinja2Templates(directory="app/templates")
 
 @app.exception_handler(NotAuthenticated)
 async def handle_not_authenticated(request: Request, exc: NotAuthenticated):
-    """require_login이 던진 예외를 잡아 로그인 페이지로 보낸다 (인가 실패 처리 지점)."""
+    """require_login이 던진 예외를 잡아 로그인 페이지로 보낸다 (인가 실패 처리 지점).
+
+    리다이렉트 사유를 세션에 1회성 플래시 메시지로 실어 보내고,
+    로그인 화면(pages.login_form)이 이를 꺼내 보여준 뒤 지운다.
+    """
+    request.session["flash"] = "로그인이 필요한 기능입니다."
     return RedirectResponse(url="/login", status_code=303)
 
 
@@ -58,4 +78,14 @@ async def handle_not_authenticated(request: Request, exc: NotAuthenticated):
 async def handle_not_found(request: Request, exc: DomainNotFound):
     return templates.TemplateResponse(
         "error.html", {"request": request, "message": str(exc)}, status_code=404
+    )
+
+
+@app.exception_handler(CSRFError)
+async def handle_csrf_error(request: Request, exc: CSRFError):
+    """verify_csrf가 던진 예외를 잡아 403으로 응답한다."""
+    return templates.TemplateResponse(
+        "error.html",
+        {"request": request, "message": "요청이 유효하지 않습니다. 새로고침 후 다시 시도해주세요."},
+        status_code=403,
     )

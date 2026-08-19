@@ -25,6 +25,7 @@
         <a href="/books">도서 목록</a>
         <a href="/rentals">내 대여 목록</a>
         <form class="inline" action="/logout" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
           <button type="submit">로그아웃</button>
         </form>
       {% else %}

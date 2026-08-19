@@ -14,6 +14,7 @@
     <td>
       {% if rental.status == '대여중' %}
       <form class="inline" method="post" action="/rentals/{{ rental.id }}/return">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
         <button type="submit">반납하기</button>
       </form>
       {% endif %}

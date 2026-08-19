@@ -20,7 +20,12 @@ def rent_book(db: Session, member: Member, book_id: int) -> Rental:
     rental = Rental(member_id=member.id, book_id=book.id, status=STATUS_RENTED)
     book.available_copies -= 1
     db.add(rental)
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        # commit 실패(예: DB 제약 위반) 시 세션에 남은 변경사항을 명시적으로 되돌린다.
+        db.rollback()
+        raise
     db.refresh(rental)
     return rental
 
@@ -38,6 +43,10 @@ def return_book(db: Session, member: Member, rental_id: int) -> Rental:
     rental.status = STATUS_RETURNED
     rental.returned_at = datetime.utcnow()
     rental.book.available_copies += 1
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
     db.refresh(rental)
     return rental

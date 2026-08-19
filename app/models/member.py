@@ -17,3 +17,6 @@ class Member(Base):
     # 회원이 삭제되어도 "누가 언제 무엇을 빌렸는지"는 감사 기록으로 남아야 하므로
     # cascade를 걸지 않는다(회원 삭제 기능 자체도 이 앱엔 없다).
     rentals = relationship("Rental", back_populates="member")
+
+    def __repr__(self) -> str:
+        return f"<Member id={self.id} username={self.username!r}>"

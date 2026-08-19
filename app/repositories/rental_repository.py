@@ -1,10 +1,12 @@
+from typing import List
+
 from sqlalchemy.orm import Session
 
 from app.errors import DomainNotFound
 from app.models.rental import Rental
 
 
-def get_by_member(db: Session, member_id: int):
+def get_by_member(db: Session, member_id: int) -> List[Rental]:
     return db.query(Rental).filter(Rental.member_id == member_id).order_by(Rental.id.desc()).all()
 
 

@@ -3,7 +3,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
-from app.auth.dependencies import require_login
+from app.auth.dependencies import get_or_create_csrf_token, require_login, verify_csrf
 from app.database import get_db
 from app.models.member import Member
 from app.repositories import book_repository
@@ -11,6 +11,7 @@ from app.services import rental_service
 
 router = APIRouter(prefix="/books")
 templates = Jinja2Templates(directory="app/templates")
+templates.env.globals["csrf_token"] = get_or_create_csrf_token
 
 
 @router.get("")
@@ -39,7 +40,7 @@ def book_detail(
     )
 
 
-@router.post("/{book_id}/rent")
+@router.post("/{book_id}/rent", dependencies=[Depends(verify_csrf)])
 def rent(
     book_id: int,
     request: Request,
